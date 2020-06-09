@@ -4,8 +4,11 @@ import android.content.Context
 import androidx.lifecycle.LiveData
 import androidx.room.Room
 import database.CrimeDatabase
+import database.migration_1_2
 import java.lang.IllegalStateException
 import java.util.*
+import java.util.concurrent.Executor
+import java.util.concurrent.Executors
 
 private const val DATABASE_NAME = "crime-database"
 
@@ -15,13 +18,26 @@ class CrimeRepository private constructor(context: Context){
         context.applicationContext,
         CrimeDatabase::class.java,
         DATABASE_NAME
-    ).build()
+    ).addMigrations(migration_1_2).build()
 
     private val crimeDAO = database.crimeDAO()
+    private val executor = Executors.newSingleThreadExecutor()
 
     fun getCrimes(): LiveData<List<Crime>> = crimeDAO.getCrimes()
 
     fun getCrime(id: UUID): LiveData<Crime?> = crimeDAO.getCrime(id)
+
+    fun updateCrime(crime: Crime) {
+        executor.execute {
+            crimeDAO.updateCrime(crime)
+        }
+    }
+
+    fun addCrime(crime: Crime) {
+        executor.execute {
+            crimeDAO.addCrime(crime)
+        }
+    }
 
     companion object {
         private var INSTANCE: CrimeRepository? = null
